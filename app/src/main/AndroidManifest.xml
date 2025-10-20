@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.mad_project">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -30,7 +33,11 @@
             android:name=".MainActivity"
             android:exported="true" />
 
+        <activity
+            android:name=".RecipeDetailActivity"
+            android:exported="true" />
 
     </application>
+
 
 </manifest>
