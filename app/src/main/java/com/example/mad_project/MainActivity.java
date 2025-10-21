@@ -1,7 +1,11 @@
 package com.example.mad_project;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.SearchView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +30,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Toolbar setup (for menu visibility)
+        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+
         recyclerView = findViewById(R.id.recipeRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         searchView = findViewById(R.id.searchView);
@@ -37,8 +46,7 @@ public class MainActivity extends AppCompatActivity {
                         "https://mad-project-72034-default-rtdb.asia-southeast1.firebasedatabase.app/")
                 .getReference("recipes");
 
-        // Check if recipes exist
-        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        dbRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()) {
@@ -54,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("FirebaseDebug", "Database error: " + error.getMessage());
             }
         });
+
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -72,12 +81,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void addSampleRecipes() {
         ArrayList<Recipe> samples = new ArrayList<>();
-        samples.add(new Recipe("Pasta", "https://via.placeholder.com/150", "Delicious creamy pasta."));
-        samples.add(new Recipe("Pizza", "https://via.placeholder.com/150", "Cheesy veggie pizza."));
-        samples.add(new Recipe("Salad", "https://via.placeholder.com/150", "Healthy green salad."));
+        samples.add(new Recipe("Pasta", "https://via.placeholder.com/150", "Delicious creamy pasta.", false));
+        samples.add(new Recipe("Pizza", "https://via.placeholder.com/150", "Cheesy veggie pizza.", false));
+        samples.add(new Recipe("Salad", "https://via.placeholder.com/150", "Healthy green salad.", false));
 
         for (Recipe recipe : samples) {
-            String key = recipe.name.replace(".", "_"); // Avoid special characters
+            String key = recipe.name.replace(".", "_");
             dbRef.child(key).setValue(recipe)
                     .addOnSuccessListener(aVoid -> Log.d("FirebaseDebug", recipe.name + " added!"))
                     .addOnFailureListener(e -> Log.e("FirebaseDebug", "Failed to add " + recipe.name + ": " + e.getMessage()));
@@ -93,5 +102,27 @@ public class MainActivity extends AppCompatActivity {
             if (r != null) recipes.add(r);
         }
         adapter.setData(recipes);
+    }
+
+    // 🔸 Inflate menu
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    // 🔸 Handle menu item clicks
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.add_recipe) {
+            startActivity(new Intent(MainActivity.this, AddRecipeActivity.class));
+            return true;
+        } else if (id == R.id.favorites) {
+            // Placeholder for favorites feature
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

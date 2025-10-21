@@ -37,6 +37,11 @@
             android:name=".RecipeDetailActivity"
             android:exported="true" />
 
+        <activity
+            android:name=".AddRecipeActivity"
+            android:exported="true" />
+
+
     </application>
 
 
