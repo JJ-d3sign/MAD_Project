@@ -11,27 +11,19 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import java.util.ArrayList;
+import java.util.List;
 
 public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder> {
 
     private Context context;
-    private ArrayList<Recipe> recipeList;
-    private ArrayList<Recipe> fullList;
-    private DatabaseReference favRef;
+    private List<Recipe> recipeList;
+    private List<Recipe> fullList;
 
     public RecipeAdapter(Context context) {
         this.context = context;
         this.recipeList = new ArrayList<>();
         this.fullList = new ArrayList<>();
-
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
-                : "guest";
-        favRef = FirebaseDatabase.getInstance().getReference("favorites").child(uid);
     }
 
     @NonNull
@@ -67,10 +59,6 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
         holder.favBtn.setOnClickListener(v -> {
             recipe.favorite = !recipe.favorite;
             holder.favBtn.setImageResource(recipe.favorite ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
-            if (recipe.favorite)
-                favRef.child(recipe.name).setValue(recipe);
-            else
-                favRef.child(recipe.name).removeValue();
         });
     }
 
@@ -79,7 +67,7 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
         return recipeList.size();
     }
 
-    public void setData(ArrayList<Recipe> data) {
+    public void setData(List<Recipe> data) {
         recipeList.clear();
         recipeList.addAll(data);
 

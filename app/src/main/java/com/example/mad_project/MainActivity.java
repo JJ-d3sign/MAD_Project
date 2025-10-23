@@ -11,29 +11,33 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+
+import com.example.mad_project.api.MealApiService;
+import com.example.mad_project.model.MealsResponse;
+import com.example.mad_project.api.RetrofitClient;
+import com.example.mad_project.model.Meal;
+
 import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
     RecyclerView recyclerView;
     RecipeAdapter adapter;
     SearchView searchView;
-    DatabaseReference dbRef;
+    private MealApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Toolbar setup (for menu visibility)
         androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
 
         recyclerView = findViewById(R.id.recipeRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -42,69 +46,56 @@ public class MainActivity extends AppCompatActivity {
         adapter = new RecipeAdapter(this);
         recyclerView.setAdapter(adapter);
 
-        dbRef = FirebaseDatabase.getInstance(
-                        "https://mad-project-72034-default-rtdb.asia-southeast1.firebasedatabase.app/")
-                .getReference("recipes");
+        apiService = RetrofitClient.getApiService();
+        fetchInitialRecipes();
 
-        dbRef.addValueEventListener(new ValueEventListener() {
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (!snapshot.exists()) {
-                    Log.d("FirebaseDebug", "Recipes node empty. Adding sample recipes...");
-                    addSampleRecipes();
+            public boolean onQueryTextSubmit(String query) {
+                searchRecipes(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (!newText.isEmpty()) {
+                    searchRecipes(newText);
                 } else {
-                    loadRecipes(snapshot);
+                    fetchInitialRecipes();
+                }
+                return true;
+            }
+        });
+    }
+
+    private void fetchInitialRecipes() {
+        searchRecipes("soup"); // Fetch a broader category of recipes on startup
+    }
+
+    private void searchRecipes(String query) {
+        apiService.searchMealsByName(query).enqueue(new Callback<MealsResponse>() {
+            @Override
+            public void onResponse(Call<MealsResponse> call, Response<MealsResponse> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().getMeals() != null && !response.body().getMeals().isEmpty()) {
+                    List<Meal> meals = response.body().getMeals();
+                    List<Recipe> recipes = new ArrayList<>();
+                    for (Meal meal : meals) {
+                        recipes.add(new Recipe(meal.getStrMeal(), meal.getStrMealThumb(), meal.getStrInstructions(), false));
+                    }
+                    adapter.setData(recipes);
+                } else {
+                    Log.e("API_ERROR", "Response not successful or body is empty");
+                    adapter.setData(new ArrayList<>());
                 }
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("FirebaseDebug", "Database error: " + error.getMessage());
-            }
-        });
-
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String s) {
-                adapter.filter(s);
-                return false;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String s) {
-                adapter.filter(s);
-                return false;
+            public void onFailure(Call<MealsResponse> call, Throwable t) {
+                Log.e("API_FAILURE", "Failed to fetch data: " + t.getMessage());
             }
         });
     }
 
-    private void addSampleRecipes() {
-        ArrayList<Recipe> samples = new ArrayList<>();
-        samples.add(new Recipe("Pasta", "https://via.placeholder.com/150", "Delicious creamy pasta.", false));
-        samples.add(new Recipe("Pizza", "https://via.placeholder.com/150", "Cheesy veggie pizza.", false));
-        samples.add(new Recipe("Salad", "https://via.placeholder.com/150", "Healthy green salad.", false));
-
-        for (Recipe recipe : samples) {
-            String key = recipe.name.replace(".", "_");
-            dbRef.child(key).setValue(recipe)
-                    .addOnSuccessListener(aVoid -> Log.d("FirebaseDebug", recipe.name + " added!"))
-                    .addOnFailureListener(e -> Log.e("FirebaseDebug", "Failed to add " + recipe.name + ": " + e.getMessage()));
-        }
-
-        adapter.setData(samples);
-    }
-
-    private void loadRecipes(DataSnapshot snapshot) {
-        ArrayList<Recipe> recipes = new ArrayList<>();
-        for (DataSnapshot ds : snapshot.getChildren()) {
-            Recipe r = ds.getValue(Recipe.class);
-            if (r != null) recipes.add(r);
-        }
-        adapter.setData(recipes);
-    }
-
-    // 🔸 Inflate menu
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -112,7 +103,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    // 🔸 Handle menu item clicks
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
