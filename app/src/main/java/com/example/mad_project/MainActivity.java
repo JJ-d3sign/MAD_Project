@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.SearchView;
+import android.widget.Toast; // Import for Toast message
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,6 +17,15 @@ import com.example.mad_project.api.MealApiService;
 import com.example.mad_project.model.MealsResponse;
 import com.example.mad_project.api.RetrofitClient;
 import com.example.mad_project.model.Meal;
+
+// --- Imports for Firebase (Database + Auth) ---
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+// --- End Imports ---
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +40,12 @@ public class MainActivity extends AppCompatActivity {
     RecipeAdapter adapter;
     SearchView searchView;
     private MealApiService apiService;
+
+    // --- Firebase Variables ---
+    private DatabaseReference dbRef;
+    private List<Recipe> firebaseRecipes = new ArrayList<>();
+    private FirebaseAuth auth;
+    // --- End Firebase Variables ---
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +63,19 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         apiService = RetrofitClient.getApiService();
-        fetchInitialRecipes();
+
+        // --- Initialize Firebase Auth ---
+        auth = FirebaseAuth.getInstance();
+
+        // --- Initialize Firebase Database ---
+        // Using the same URL from your AddRecipeActivity
+        dbRef = FirebaseDatabase.getInstance(
+                        "https://mad-project-72034-default-rtdb.asia-southeast1.firebasedatabase.app/")
+                .getReference("recipes");
+        setupFirebaseListener();
+        // --- End Firebase Init ---
+
+        fetchInitialRecipes(); // Fetch initial API recipes
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -68,33 +96,114 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void fetchInitialRecipes() {
-        searchRecipes("soup"); // Fetch a broader category of recipes on startup
+    /**
+     * Sets up the real-time listener for Firebase Database.
+     * This fetches all user-added recipes and updates the list on any change.
+     */
+    private void setupFirebaseListener() {
+        dbRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                firebaseRecipes.clear(); // Clear the old list
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Recipe recipe = dataSnapshot.getValue(Recipe.class);
+                    if (recipe != null) {
+                        firebaseRecipes.add(recipe);
+                    }
+                }
+
+                // Refresh the list with the current query
+                String currentQuery = searchView.getQuery().toString();
+                if (currentQuery.isEmpty()) {
+                    fetchInitialRecipes();
+                } else {
+                    searchRecipes(currentQuery);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("Firebase_Error", "Failed to read data: " + error.getMessage());
+            }
+        });
     }
 
+    /**
+     * Fetches the initial "soup" recipes from the API.
+     */
+    private void fetchInitialRecipes() {
+        searchRecipes("soup");
+    }
+
+    /**
+     * Searches for recipes from both the API and the Firebase Database.
+     * @param query The search term entered by the user.
+     */
     private void searchRecipes(String query) {
+        // Normalize the query for case-insensitive matching
+        String normalizedQuery = query.toLowerCase();
+
         apiService.searchMealsByName(query).enqueue(new Callback<MealsResponse>() {
             @Override
             public void onResponse(Call<MealsResponse> call, Response<MealsResponse> response) {
+                List<Recipe> apiRecipes = new ArrayList<>();
                 if (response.isSuccessful() && response.body() != null && response.body().getMeals() != null && !response.body().getMeals().isEmpty()) {
                     List<Meal> meals = response.body().getMeals();
-                    List<Recipe> recipes = new ArrayList<>();
                     for (Meal meal : meals) {
-                        recipes.add(new Recipe(meal.getStrMeal(), meal.getStrMealThumb(), meal.getStrInstructions(), false));
+                        apiRecipes.add(new Recipe(meal.getStrMeal(), meal.getStrMealThumb(), meal.getStrInstructions(), false));
                     }
-                    adapter.setData(recipes);
                 } else {
                     Log.e("API_ERROR", "Response not successful or body is empty");
-                    adapter.setData(new ArrayList<>());
                 }
+
+                // --- Combine lists ---
+                List<Recipe> combinedList = new ArrayList<>();
+
+                // 1. Add API recipes (they are already filtered by the API call)
+                combinedList.addAll(apiRecipes);
+
+                // 2. Filter and add Firebase recipes
+                if (firebaseRecipes != null && !firebaseRecipes.isEmpty()) {
+                    for (Recipe fbRecipe : firebaseRecipes) {
+                        if (fbRecipe.getName() != null && fbRecipe.getName().toLowerCase().contains(normalizedQuery)) {
+                            // Simple check to avoid adding duplicates
+                            boolean alreadyAdded = false;
+                            for(Recipe apiRecipe : apiRecipes){
+                                if(apiRecipe.getName() != null && apiRecipe.getName().equalsIgnoreCase(fbRecipe.getName())){
+                                    alreadyAdded = true;
+                                    break;
+                                }
+                            }
+                            if(!alreadyAdded){
+                                combinedList.add(fbRecipe);
+                            }
+                        }
+                    }
+                }
+
+                // 3. Set the combined data to the adapter
+                adapter.setData(combinedList);
+                // --- End combining lists ---
             }
 
             @Override
             public void onFailure(Call<MealsResponse> call, Throwable t) {
                 Log.e("API_FAILURE", "Failed to fetch data: " + t.getMessage());
+
+                // If API fails, still show matching Firebase recipes
+                List<Recipe> combinedList = new ArrayList<>();
+                if (firebaseRecipes != null && !firebaseRecipes.isEmpty()) {
+                    for (Recipe fbRecipe : firebaseRecipes) {
+                        if (fbRecipe.getName() != null && fbRecipe.getName().toLowerCase().contains(normalizedQuery)) {
+                            combinedList.add(fbRecipe);
+                        }
+                    }
+                }
+                adapter.setData(combinedList);
             }
         });
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -106,13 +215,32 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
+
         if (id == R.id.add_recipe) {
             startActivity(new Intent(MainActivity.this, AddRecipeActivity.class));
             return true;
-        } else if (id == R.id.favorites) {
+        }
+
+        else if (id == R.id.favorites) {
             // Placeholder for favorites feature
             return true;
         }
+
+        // --- Logout Button Handler ---
+        else if (id == R.id.logout) {
+            auth.signOut(); // Sign the user out
+            Toast.makeText(this, "Logged Out", Toast.LENGTH_SHORT).show();
+
+            // Send user back to LoginActivity
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            // Clear the activity stack to prevent user from pressing "back"
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+
+            finish(); // Close MainActivity
+            return true;
+        }
+
         return super.onOptionsItemSelected(item);
     }
 }

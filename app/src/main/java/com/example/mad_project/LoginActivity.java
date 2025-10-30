@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser; // --- Add this import ---
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -29,6 +30,17 @@ public class LoginActivity extends AppCompatActivity {
         tvSignup = findViewById(R.id.tvSignup);
 
         auth = FirebaseAuth.getInstance();
+
+        // --- Add this block to check for a logged-in user ---
+        // This will run as soon as the app opens
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            // User is already logged in, skip LoginActivity
+            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            finish(); // Close this activity so the user can't press "back" to it
+            return; // Stop the rest of onCreate from running
+        }
+        // --- End of new block ---
 
         btnLogin.setOnClickListener(v -> {
             String emailText = email.getText().toString().trim();

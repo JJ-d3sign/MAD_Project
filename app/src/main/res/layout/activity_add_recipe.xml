@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="#FFFFFF"
+    android:padding="20dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,21 +16,42 @@
             android:layout_width="200dp"
             android:layout_height="200dp"
             android:scaleType="centerCrop"
-            android:background="#E0E0E0"
-            android:layout_marginBottom="12dp" />
+            android:background="#FFF3E0"
+            android:layout_marginBottom="12dp"
+            android:elevation="4dp"
+            android:padding="4dp" />
+
+        <EditText
+            android:id="@+id/imgUrlInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter Image URL"
+            android:inputType="textUri"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#FF9800"
+            android:textColor="#000000"
+            android:textColorHint="#9E9E9E" />
 
         <Button
-            android:id="@+id/btnSelectImage"
+            android:id="@+id/btnPreviewImage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Select Image" />
+            android:text="Preview Image"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#FF9800"
+            android:layout_marginTop="10dp"
+            android:paddingHorizontal="24dp"
+            android:elevation="3dp" />
 
         <EditText
             android:id="@+id/nameInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Dish Name"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="20dp"
+            android:backgroundTint="#FF9800"
+            android:textColor="#000000"
+            android:textColorHint="#9E9E9E" />
 
         <EditText
             android:id="@+id/descInput"
@@ -37,14 +59,21 @@
             android:layout_height="wrap_content"
             android:hint="Description"
             android:layout_marginTop="8dp"
+            android:backgroundTint="#FF9800"
             android:inputType="textMultiLine"
-            android:minLines="3" />
+            android:minLines="3"
+            android:textColor="#000000"
+            android:textColorHint="#9E9E9E" />
 
         <Button
             android:id="@+id/btnUpload"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Add Recipe"
-            android:layout_marginTop="16dp" />
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#FF9800"
+            android:layout_marginTop="20dp"
+            android:paddingVertical="10dp"
+            android:elevation="3dp" />
     </LinearLayout>
 </ScrollView>

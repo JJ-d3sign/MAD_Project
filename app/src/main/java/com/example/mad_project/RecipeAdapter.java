@@ -37,28 +37,35 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Recipe recipe = recipeList.get(position);
 
-        holder.recipeName.setText(recipe.name != null ? recipe.name : "No Name");
+        String name = recipe.getName();
+        holder.recipeName.setText(name != null ? name : "No Name");
 
-        if (recipe.imageUrl != null && !recipe.imageUrl.isEmpty()) {
-            Glide.with(context).load(recipe.imageUrl).into(holder.recipeImage);
+        String imageUrl = recipe.getImageUrl();
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Glide.with(context).load(imageUrl).into(holder.recipeImage);
         } else {
             holder.recipeImage.setImageResource(R.drawable.ic_launcher_background);
         }
 
-        holder.favBtn.setImageResource(recipe.favorite ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+        holder.favBtn.setImageResource(recipe.isFavorite() ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
 
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, RecipeDetailActivity.class);
-            intent.putExtra("name", recipe.name != null ? recipe.name : "No Name");
-            intent.putExtra("image", recipe.imageUrl != null ? recipe.imageUrl : "");
-            intent.putExtra("desc", recipe.description != null ? recipe.description : "No Description");
+            intent.putExtra("name", recipe.getName() != null ? recipe.getName() : "No Name");
+            intent.putExtra("image", recipe.getImageUrl() != null ? recipe.getImageUrl() : "");
+            intent.putExtra("desc", recipe.getDescription() != null ? recipe.getDescription() : "No Description");
             context.startActivity(intent);
         });
 
-
         holder.favBtn.setOnClickListener(v -> {
-            recipe.favorite = !recipe.favorite;
-            holder.favBtn.setImageResource(recipe.favorite ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+            // toggle favorite via setter so state is encapsulated
+            boolean newFav = !recipe.isFavorite();
+            recipe.setFavorite(newFav);
+            holder.favBtn.setImageResource(newFav ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+
+            // If you want to persist favorite state to Firebase, do it here (example below):
+            // String key = recipe.getName(); or better: store a unique id in Recipe and use it
+            // FirebaseDatabase.getInstance().getReference("recipes").child(key).child("favorite").setValue(newFav);
         });
     }
 
@@ -79,12 +86,13 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
 
     public void filter(String text) {
         recipeList.clear();
-        if (text.isEmpty()) {
+        if (text == null || text.isEmpty()) {
             recipeList.addAll(fullList);
         } else {
-            text = text.toLowerCase();
+            String lower = text.toLowerCase();
             for (Recipe item : fullList) {
-                if (item.name != null && item.name.toLowerCase().contains(text)) {
+                String nm = item.getName();
+                if (nm != null && nm.toLowerCase().contains(lower)) {
                     recipeList.add(item);
                 }
             }

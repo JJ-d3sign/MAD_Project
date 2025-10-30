@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
+// import android.widget.ImageView; // --- Remove this import
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,7 +15,7 @@ import com.google.firebase.auth.FirebaseAuth;
 public class SignUpActivity extends AppCompatActivity {
 
     private EditText name, email, password;
-    private ImageView profileImage;
+    // private ImageView profileImage; // --- Remove this line
     private Button btnSignup;
     private TextView tvLogin;
     private FirebaseAuth auth;
@@ -28,7 +28,7 @@ public class SignUpActivity extends AppCompatActivity {
         name = findViewById(R.id.name);
         email = findViewById(R.id.email);
         password = findViewById(R.id.password);
-        profileImage = findViewById(R.id.profileImage);
+        // profileImage = findViewById(R.id.profileImage); // --- Remove this line
         btnSignup = findViewById(R.id.btnSignup);
         tvLogin = findViewById(R.id.tvLogin);
 

@@ -49,14 +49,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"/>
 
-        <ImageView
-            android:id="@+id/profileImage"
-            android:src="@android:drawable/ic_menu_camera"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_marginTop="20dp"
-            android:contentDescription="Profile Image"/>
-
         <Button
             android:id="@+id/btnSignup"
             android:text="Create Account"
