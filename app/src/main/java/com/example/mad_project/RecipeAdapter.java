@@ -8,9 +8,11 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast; // Import Toast
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.google.firebase.database.DatabaseReference; // Import
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,12 +21,25 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
     private Context context;
     private List<Recipe> recipeList;
     private List<Recipe> fullList;
+    private DatabaseReference dbRef; // Add this
 
-    public RecipeAdapter(Context context) {
+    // --- MODIFIED CONSTRUCTOR ---
+    public RecipeAdapter(Context context, DatabaseReference dbRef) {
         this.context = context;
+        this.dbRef = dbRef; // Initialize
         this.recipeList = new ArrayList<>();
         this.fullList = new ArrayList<>();
     }
+
+    // --- SECOND CONSTRUCTOR (to avoid breaking MainActivity) ---
+    // You can remove this if you update MainActivity right away
+    public RecipeAdapter(Context context) {
+        this.context = context;
+        this.dbRef = null; // Or initialize it properly if you prefer
+        this.recipeList = new ArrayList<>();
+        this.fullList = new ArrayList<>();
+    }
+
 
     @NonNull
     @Override
@@ -57,17 +72,42 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
             context.startActivity(intent);
         });
 
+        // --- MODIFIED CLICK LISTENER ---
         holder.favBtn.setOnClickListener(v -> {
-            // toggle favorite via setter so state is encapsulated
-            boolean newFav = !recipe.isFavorite();
-            recipe.setFavorite(newFav);
-            holder.favBtn.setImageResource(newFav ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+            if (dbRef == null) {
+                Toast.makeText(context, "Database error", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            // If you want to persist favorite state to Firebase, do it here (example below):
-            // String key = recipe.getName(); or better: store a unique id in Recipe and use it
-            // FirebaseDatabase.getInstance().getReference("recipes").child(key).child("favorite").setValue(newFav);
+            // This is a potential issue: using 'name' as a key
+            // It will fail if the name has characters like '.', '#', '$', '[', or ']'
+            // It also won't work for API-based recipes unless they are first saved to your DB.
+            String recipeKey = recipe.getName();
+            if (recipeKey == null || recipeKey.isEmpty()) {
+                Toast.makeText(context, "Cannot favorite this item", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean newFav = !recipe.isFavorite();
+            recipe.setFavorite(newFav); // Update local object
+            holder.favBtn.setImageResource(newFav ? R.drawable.ic_favorite : R.drawable.ic_favorite_border); // Update UI
+
+            // Save the new "favorite" value to Firebase
+            dbRef.child(recipeKey).child("favorite").setValue(newFav)
+                    .addOnSuccessListener(aVoid -> {
+                        String msg = newFav ? "Added to favorites" : "Removed from favorites";
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        // If save fails, revert the change
+                        recipe.setFavorite(!newFav);
+                        holder.favBtn.setImageResource(recipe.isFavorite() ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+                        Toast.makeText(context, "Failed to update favorite", Toast.LENGTH_SHORT).show();
+                    });
         });
     }
+
+    // ... (getItemCount, setData, filter, ViewHolder class remain the same) ...
 
     @Override
     public int getItemCount() {

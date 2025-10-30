@@ -59,11 +59,6 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         searchView = findViewById(R.id.searchView);
 
-        adapter = new RecipeAdapter(this);
-        recyclerView.setAdapter(adapter);
-
-        apiService = RetrofitClient.getApiService();
-
         // --- Initialize Firebase Auth ---
         auth = FirebaseAuth.getInstance();
 
@@ -72,6 +67,14 @@ public class MainActivity extends AppCompatActivity {
         dbRef = FirebaseDatabase.getInstance(
                         "https://mad-project-72034-default-rtdb.asia-southeast1.firebasedatabase.app/")
                 .getReference("recipes");
+
+        // --- MODIFIED: Pass dbRef to the adapter's constructor ---
+        adapter = new RecipeAdapter(this, dbRef);
+        recyclerView.setAdapter(adapter);
+
+        apiService = RetrofitClient.getApiService();
+
+        // --- Firebase listener setup (moved from below) ---
         setupFirebaseListener();
         // --- End Firebase Init ---
 
@@ -221,8 +224,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        // --- MODIFIED: Launch FavoritesActivity ---
         else if (id == R.id.favorites) {
-            // Placeholder for favorites feature
+            startActivity(new Intent(MainActivity.this, FavoritesActivity.class));
             return true;
         }
 
