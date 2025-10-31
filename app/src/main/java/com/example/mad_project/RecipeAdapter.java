@@ -92,8 +92,10 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.ViewHolder
             recipe.setFavorite(newFav); // Update local object
             holder.favBtn.setImageResource(newFav ? R.drawable.ic_favorite : R.drawable.ic_favorite_border); // Update UI
 
-            // Save the new "favorite" value to Firebase
-            dbRef.child(recipeKey).child("favorite").setValue(newFav)
+            // Save the entire Recipe object to Firebase.
+            // This ensures all fields (name, imageUrl, description) are saved for API recipes.
+            // This also handles unfavoriting correctly by setting 'favorite' to false in the full object.
+            dbRef.child(recipeKey).setValue(recipe) // <--- MODIFIED LINE
                     .addOnSuccessListener(aVoid -> {
                         String msg = newFav ? "Added to favorites" : "Removed from favorites";
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
